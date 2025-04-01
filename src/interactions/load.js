@@ -51,8 +51,8 @@ export const load = function (gsapContext) {
     tl.set(item, { opacity: 1 });
     tl.fromTo(
       splitText.words,
-      { opacity: 0, y: '50%', rotateX: 45 },
-      { opacity: 1, y: '0%', rotateX: 0, stagger: { each: 0.1, from: 'left' } },
+      { opacity: 0, y: '50%', rotateY: 8 },
+      { opacity: 1, y: '0%', rotateY: 0, stagger: { each: 0.1, from: 'left' } },
       position
     );
   };
@@ -66,7 +66,12 @@ export const load = function (gsapContext) {
   const loadItem = function (item) {
     // get the position attribute
     const position = attr(DEFAULT_STAGGER, item.getAttribute(POSITION));
-    tl.fromTo(item, { opacity: 0, y: '2rem' }, { opacity: 1, y: '0rem' }, position);
+    tl.fromTo(
+      item,
+      { opacity: 0, y: '2rem', rotateY: 7 },
+      { opacity: 1, y: '0rem', rotateY: 7 },
+      position
+    );
   };
 
   //add item tween to each element in this parent

@@ -1,4 +1,5 @@
 import { attr } from './utilities';
+import { accordion } from './interactions/accordion';
 import { initLenis } from './interactions/lenis';
 import { hoverActive } from './interactions/hover-active';
 import { load } from './interactions/load';
@@ -38,6 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
         hoverActive(gsapContext);
         modal(gsapContext);
         load(gsapContext);
+        accordion(gsapContext);
         //conditional interactions
         if (!reduceMotion) {
           scrollIn(gsapContext);

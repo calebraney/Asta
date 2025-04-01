@@ -7,6 +7,7 @@ export const scrollIn = function (gsapContext) {
   const ELEMENT = 'data-ix-scrollin';
   // types of scrolling elements (value for scrollin element attribute)
   const HEADING = 'heading';
+  const TITLE = 'title';
   const ITEM = 'item';
   const CONTAINER = 'container';
   const STAGGER = 'stagger';
@@ -25,9 +26,9 @@ export const scrollIn = function (gsapContext) {
 
   // DEFAULTS
   const EASE_SMALL = 0.1;
-  const EASE_LARGE = 0.3;
-  const DURATION = 0.6;
-  const EASE = 'power1.out';
+  const EASE_LARGE = 0.2;
+  const DURATION = 0.8;
+  const EASE = 'power3.inOut';
 
   //resuable timeline creation with option attributes for individual customization per element
   const scrollInTL = function (item) {
@@ -63,11 +64,13 @@ export const scrollIn = function (gsapContext) {
   const defaultTween = function (item, tl, options = {}) {
     const varsFrom = {
       opacity: 0,
-      y: '2rem',
+      x: '1rem',
+      rotateY: 8,
     };
     const varsTo = {
       opacity: 1,
-      y: '0rem',
+      x: '0rem',
+      rotateY: 0,
     };
     //optional adjustments to the tween
     // {stagger: 0.2}
@@ -80,6 +83,10 @@ export const scrollIn = function (gsapContext) {
     }
     if (options.stagger === 'large') {
       varsTo.stagger = { each: EASE_LARGE, from: 'start' };
+    }
+    if (options.move === 'none') {
+      varsFrom.x = '0rem';
+      varsTo.ease = 'expo.out';
     }
     // putting tween together
     const tween = tl.fromTo(item, varsFrom, varsTo);
@@ -97,10 +104,28 @@ export const scrollIn = function (gsapContext) {
     //set heading to full opacity (check to see if needed)
     // item.style.opacity = 1;
     const tl = scrollInTL(item);
-    const tween = defaultTween(splitText.words, tl, { stagger: 'small', skew: 'large' });
+    const tween = defaultTween(splitText.words, tl, { stagger: 'small' });
     //add event calleback to revert text on completion
     tl.eventCallback('onComplete', () => {
-      splitText.revert();
+      // splitText.revert();
+    });
+  };
+
+  const scrollInTitle = function (item) {
+    //check if item is rich text
+    if (item.classList.contains('w-richtext')) {
+      item = item.firstChild;
+    }
+    //split the text
+    const splitText = runSplit(item, 'words chars');
+    if (!splitText) return;
+    //set heading to full opacity (check to see if needed)
+    // item.style.opacity = 1;
+    const tl = scrollInTL(item);
+    const tween = defaultTween(splitText.chars, tl, { stagger: 0.075, move: 'none' });
+    //add event calleback to revert text on completion
+    tl.eventCallback('onComplete', () => {
+      // splitText.revert();
     });
   };
 
@@ -125,29 +150,19 @@ export const scrollIn = function (gsapContext) {
     //item is the image wrap for this animation
     if (!item) return;
     //set clip path directions
-    const child = item.firstChild;
+    const clipStart = getClipDirection('left');
+    const clipEnd = getClipDirection('full');
     //create timeline
     const tl = scrollInTL(item);
     tl.fromTo(
-      child,
-      {
-        scale: 1.2,
-      },
-      {
-        scale: 1,
-        duration: 1,
-      }
-    );
-    tl.fromTo(
       item,
       {
-        scale: 0.9,
+        clipPath: clipStart,
       },
       {
-        scale: 1,
-        duration: 1,
-      },
-      '<'
+        clipPath: clipEnd,
+        duration: 1.2,
+      }
     );
   };
 
@@ -219,6 +234,9 @@ export const scrollIn = function (gsapContext) {
     if (runOnBreakpoint === false) return;
     //find the type of the scrolling animation
     const scrollInType = item.getAttribute(ELEMENT);
+    if (scrollInType === TITLE) {
+      scrollInTitle(item);
+    }
     if (scrollInType === HEADING) {
       scrollInHeading(item);
     }

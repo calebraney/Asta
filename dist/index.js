@@ -783,6 +783,24 @@
   }();
 
   // src/utilities.js
+  var stopScroll = function(lenis) {
+    if (lenis) {
+      lenis.stop();
+    } else {
+      const body = document.querySelector("body");
+      const NO_SCROLL_CLASS = "no-scroll";
+      body.classList.add(NO_SCROLL_CLASS);
+    }
+  };
+  var startScroll = function(lenis) {
+    if (lenis) {
+      lenis.start();
+    } else {
+      const body = document.querySelector("body");
+      const NO_SCROLL_CLASS = "no-scroll";
+      body.classList.remove(NO_SCROLL_CLASS);
+    }
+  };
   var attr = function(defaultVal, attrVal) {
     const defaultValType = typeof defaultVal;
     if (typeof attrVal !== "string" || attrVal.trim() === "") return defaultVal;
@@ -792,6 +810,15 @@
     if (!isNaN(attrVal) && defaultValType === "number") return +attrVal;
     return defaultVal;
   };
+  var attrIfSet = function(item2, attributeName, defaultValue) {
+    const hasAttribute = item2.hasAttribute(attributeName);
+    const attributeValue = attr(defaultValue, item2.getAttribute(attributeName));
+    if (hasAttribute) {
+      return attributeValue;
+    } else {
+      return;
+    }
+  };
   var runSplit = function(text, types = "lines, words") {
     if (!text) return;
     typeSplit = new SplitType(text, {
@@ -799,8 +826,8 @@
     });
     return typeSplit;
   };
-  var checkBreakpoints = function(item, animationID, gsapContext) {
-    if (!item || !animationID || !gsapContext) {
+  var checkBreakpoints = function(item2, animationID, gsapContext) {
+    if (!item2 || !animationID || !gsapContext) {
       console.error(`GSAP checkBreakpoints Error in ${animationID}`);
       return;
     }
@@ -813,10 +840,10 @@
     const RUN_TABLET = `data-ix-${animationID}-tablet`;
     const RUN_MOBILE = `data-ix-${animationID}-mobile`;
     const RUN_ALL = `data-ix-${animationID}-run`;
-    runAll = attr(true, item.getAttribute(RUN_ALL));
-    runMobile = attr(true, item.getAttribute(RUN_MOBILE));
-    runTablet = attr(true, item.getAttribute(RUN_TABLET));
-    runDesktop = attr(true, item.getAttribute(RUN_DESKTOP));
+    runAll = attr(true, item2.getAttribute(RUN_ALL));
+    runMobile = attr(true, item2.getAttribute(RUN_MOBILE));
+    runTablet = attr(true, item2.getAttribute(RUN_TABLET));
+    runDesktop = attr(true, item2.getAttribute(RUN_DESKTOP));
     if (runAll === false) return false;
     if (runMobile === false && isMobile) return false;
     if (runTablet === false && isTablet) return false;
@@ -850,6 +877,426 @@
     return clipMask;
   };
 
+  // src/interactions/accordion.js
+  var accordion = function(gsapContext) {
+    const ANIMATION_ID = "accordion";
+    const WRAP = '[data-ix-accordion="wrap"]';
+    const ITEM = '[data-ix-accordion="item"]';
+    const TOP = '[data-ix-accordion="top"]';
+    const OPTION_FIRST_OPEN = "data-ix-accordion-first-open";
+    const OPTION_ONE_ACTIVE = "data-ix-accordion-one-active";
+    const OPTION_KEEP_ONE_OPEN = "data-ix-accordion-keep-one-open";
+    const OPTION_HOVER_OPEN = "data-ix-accordion-hover";
+    const ACTIVE_CLASS = "is-active";
+    const accordionLists = gsap.utils.toArray(WRAP);
+    const openAccordion = function(item2, open = true) {
+      if (open === true) {
+        item2.classList.add(ACTIVE_CLASS);
+      } else {
+        item2.classList.remove(ACTIVE_CLASS);
+      }
+    };
+    if (accordionLists.length === 0 || accordionLists === void 0) return;
+    accordionLists.forEach((list) => {
+      let runOnBreakpoint = checkBreakpoints(list, ANIMATION_ID, gsapContext);
+      if (runOnBreakpoint === false) return;
+      let firstOpen = attr(false, list.getAttribute(OPTION_FIRST_OPEN));
+      let oneActive = attr(false, list.getAttribute(OPTION_ONE_ACTIVE));
+      let keepOneOpen = attr(false, list.getAttribute(OPTION_KEEP_ONE_OPEN));
+      let hoverOnly = attr(false, list.getAttribute(OPTION_HOVER_OPEN));
+      const accordionItems = Array.from(list.querySelectorAll(ITEM));
+      if (accordionItems.length === 0) return;
+      const firstItem = list.firstElementChild;
+      if (firstOpen) {
+        openAccordion(firstItem);
+      }
+      if (!hoverOnly) {
+        list.addEventListener("click", function(e2) {
+          const clickedEl = e2.target.closest(TOP);
+          if (!clickedEl) return;
+          const clickedItem = clickedEl.closest(ITEM);
+          let clickedItemAlreadyActive = clickedItem.classList.contains(ACTIVE_CLASS);
+          if (!clickedItemAlreadyActive) {
+            if (oneActive) {
+              accordionItems.forEach((item2) => {
+                if (item2 === clickedItem) {
+                  openAccordion(item2);
+                } else {
+                  openAccordion(item2, false);
+                }
+              });
+            }
+            if (!oneActive) {
+              openAccordion(clickedItem);
+            }
+          }
+          if (clickedItemAlreadyActive && !keepOneOpen) {
+            openAccordion(clickedItem, false);
+          }
+          if (clickedItemAlreadyActive && keepOneActive) {
+            const activeItems = accordionItems.filter(function(item2) {
+              return item2.classList.contains(activeClass);
+            });
+            if (activeItems.length > 1) {
+              openAccordion(item, false);
+            }
+          }
+        });
+      }
+      if (hoverOnly) {
+        accordionItems.forEach((item2) => {
+          item2.addEventListener("mouseover", function() {
+            openAccordion(item2);
+          });
+          item2.addEventListener("mouseout", function() {
+            openAccordion(item2, false);
+          });
+        });
+      }
+    });
+  };
+
+  // node_modules/@studio-freight/lenis/dist/lenis.mjs
+  function t(t2, e2, i) {
+    return Math.max(t2, Math.min(e2, i));
+  }
+  var Animate = class {
+    advance(e2) {
+      if (!this.isRunning) return;
+      let i = false;
+      if (this.lerp) this.value = (s = this.value, o = this.to, n = 60 * this.lerp, r = e2, function(t2, e3, i2) {
+        return (1 - i2) * t2 + i2 * e3;
+      }(s, o, 1 - Math.exp(-n * r))), Math.round(this.value) === this.to && (this.value = this.to, i = true);
+      else {
+        this.currentTime += e2;
+        const s2 = t(0, this.currentTime / this.duration, 1);
+        i = s2 >= 1;
+        const o2 = i ? 1 : this.easing(s2);
+        this.value = this.from + (this.to - this.from) * o2;
+      }
+      var s, o, n, r;
+      this.onUpdate?.(this.value, i), i && this.stop();
+    }
+    stop() {
+      this.isRunning = false;
+    }
+    fromTo(t2, e2, { lerp: i = 0.1, duration: s = 1, easing: o = (t3) => t3, onStart: n, onUpdate: r }) {
+      this.from = this.value = t2, this.to = e2, this.lerp = i, this.duration = s, this.easing = o, this.currentTime = 0, this.isRunning = true, n?.(), this.onUpdate = r;
+    }
+  };
+  var Dimensions = class {
+    constructor({ wrapper: t2, content: e2, autoResize: i = true, debounce: s = 250 } = {}) {
+      this.wrapper = t2, this.content = e2, i && (this.debouncedResize = /* @__PURE__ */ function(t3, e3) {
+        let i2;
+        return function() {
+          let s2 = arguments, o = this;
+          clearTimeout(i2), i2 = setTimeout(function() {
+            t3.apply(o, s2);
+          }, e3);
+        };
+      }(this.resize, s), this.wrapper === window ? window.addEventListener("resize", this.debouncedResize, false) : (this.wrapperResizeObserver = new ResizeObserver(this.debouncedResize), this.wrapperResizeObserver.observe(this.wrapper)), this.contentResizeObserver = new ResizeObserver(this.debouncedResize), this.contentResizeObserver.observe(this.content)), this.resize();
+    }
+    destroy() {
+      this.wrapperResizeObserver?.disconnect(), this.contentResizeObserver?.disconnect(), window.removeEventListener("resize", this.debouncedResize, false);
+    }
+    resize = () => {
+      this.onWrapperResize(), this.onContentResize();
+    };
+    onWrapperResize = () => {
+      this.wrapper === window ? (this.width = window.innerWidth, this.height = window.innerHeight) : (this.width = this.wrapper.clientWidth, this.height = this.wrapper.clientHeight);
+    };
+    onContentResize = () => {
+      this.wrapper === window ? (this.scrollHeight = this.content.scrollHeight, this.scrollWidth = this.content.scrollWidth) : (this.scrollHeight = this.wrapper.scrollHeight, this.scrollWidth = this.wrapper.scrollWidth);
+    };
+    get limit() {
+      return { x: this.scrollWidth - this.width, y: this.scrollHeight - this.height };
+    }
+  };
+  var Emitter = class {
+    constructor() {
+      this.events = {};
+    }
+    emit(t2, ...e2) {
+      let i = this.events[t2] || [];
+      for (let t3 = 0, s = i.length; t3 < s; t3++) i[t3](...e2);
+    }
+    on(t2, e2) {
+      return this.events[t2]?.push(e2) || (this.events[t2] = [e2]), () => {
+        this.events[t2] = this.events[t2]?.filter((t3) => e2 !== t3);
+      };
+    }
+    off(t2, e2) {
+      this.events[t2] = this.events[t2]?.filter((t3) => e2 !== t3);
+    }
+    destroy() {
+      this.events = {};
+    }
+  };
+  var e = 100 / 6;
+  var VirtualScroll = class {
+    constructor(t2, { wheelMultiplier: e2 = 1, touchMultiplier: i = 1 }) {
+      this.element = t2, this.wheelMultiplier = e2, this.touchMultiplier = i, this.touchStart = { x: null, y: null }, this.emitter = new Emitter(), window.addEventListener("resize", this.onWindowResize, false), this.onWindowResize(), this.element.addEventListener("wheel", this.onWheel, { passive: false }), this.element.addEventListener("touchstart", this.onTouchStart, { passive: false }), this.element.addEventListener("touchmove", this.onTouchMove, { passive: false }), this.element.addEventListener("touchend", this.onTouchEnd, { passive: false });
+    }
+    on(t2, e2) {
+      return this.emitter.on(t2, e2);
+    }
+    destroy() {
+      this.emitter.destroy(), window.removeEventListener("resize", this.onWindowResize, false), this.element.removeEventListener("wheel", this.onWheel, { passive: false }), this.element.removeEventListener("touchstart", this.onTouchStart, { passive: false }), this.element.removeEventListener("touchmove", this.onTouchMove, { passive: false }), this.element.removeEventListener("touchend", this.onTouchEnd, { passive: false });
+    }
+    onTouchStart = (t2) => {
+      const { clientX: e2, clientY: i } = t2.targetTouches ? t2.targetTouches[0] : t2;
+      this.touchStart.x = e2, this.touchStart.y = i, this.lastDelta = { x: 0, y: 0 }, this.emitter.emit("scroll", { deltaX: 0, deltaY: 0, event: t2 });
+    };
+    onTouchMove = (t2) => {
+      const { clientX: e2, clientY: i } = t2.targetTouches ? t2.targetTouches[0] : t2, s = -(e2 - this.touchStart.x) * this.touchMultiplier, o = -(i - this.touchStart.y) * this.touchMultiplier;
+      this.touchStart.x = e2, this.touchStart.y = i, this.lastDelta = { x: s, y: o }, this.emitter.emit("scroll", { deltaX: s, deltaY: o, event: t2 });
+    };
+    onTouchEnd = (t2) => {
+      this.emitter.emit("scroll", { deltaX: this.lastDelta.x, deltaY: this.lastDelta.y, event: t2 });
+    };
+    onWheel = (t2) => {
+      let { deltaX: i, deltaY: s, deltaMode: o } = t2;
+      i *= 1 === o ? e : 2 === o ? this.windowWidth : 1, s *= 1 === o ? e : 2 === o ? this.windowHeight : 1, i *= this.wheelMultiplier, s *= this.wheelMultiplier, this.emitter.emit("scroll", { deltaX: i, deltaY: s, event: t2 });
+    };
+    onWindowResize = () => {
+      this.windowWidth = window.innerWidth, this.windowHeight = window.innerHeight;
+    };
+  };
+  var Lenis = class {
+    constructor({ wrapper: t2 = window, content: e2 = document.documentElement, wheelEventsTarget: i = t2, eventsTarget: s = i, smoothWheel: o = true, syncTouch: n = false, syncTouchLerp: r = 0.075, touchInertiaMultiplier: l = 35, duration: h, easing: a = (t3) => Math.min(1, 1.001 - Math.pow(2, -10 * t3)), lerp: c = !h && 0.1, infinite: d = false, orientation: p = "vertical", gestureOrientation: u = "vertical", touchMultiplier: m = 1, wheelMultiplier: v = 1, autoResize: g = true, __experimental__naiveDimensions: S = false } = {}) {
+      this.__isSmooth = false, this.__isScrolling = false, this.__isStopped = false, this.__isLocked = false, this.onVirtualScroll = ({ deltaX: t3, deltaY: e3, event: i2 }) => {
+        if (i2.ctrlKey) return;
+        const s2 = i2.type.includes("touch"), o2 = i2.type.includes("wheel");
+        if (this.options.syncTouch && s2 && "touchstart" === i2.type && !this.isStopped && !this.isLocked) return void this.reset();
+        const n2 = 0 === t3 && 0 === e3, r2 = "vertical" === this.options.gestureOrientation && 0 === e3 || "horizontal" === this.options.gestureOrientation && 0 === t3;
+        if (n2 || r2) return;
+        let l2 = i2.composedPath();
+        if (l2 = l2.slice(0, l2.indexOf(this.rootElement)), l2.find((t4) => {
+          var e4, i3, n3, r3, l3;
+          return (null === (e4 = t4.hasAttribute) || void 0 === e4 ? void 0 : e4.call(t4, "data-lenis-prevent")) || s2 && (null === (i3 = t4.hasAttribute) || void 0 === i3 ? void 0 : i3.call(t4, "data-lenis-prevent-touch")) || o2 && (null === (n3 = t4.hasAttribute) || void 0 === n3 ? void 0 : n3.call(t4, "data-lenis-prevent-wheel")) || (null === (r3 = t4.classList) || void 0 === r3 ? void 0 : r3.contains("lenis")) && !(null === (l3 = t4.classList) || void 0 === l3 ? void 0 : l3.contains("lenis-stopped"));
+        })) return;
+        if (this.isStopped || this.isLocked) return void i2.preventDefault();
+        if (this.isSmooth = this.options.syncTouch && s2 || this.options.smoothWheel && o2, !this.isSmooth) return this.isScrolling = false, void this.animate.stop();
+        i2.preventDefault();
+        let h2 = e3;
+        "both" === this.options.gestureOrientation ? h2 = Math.abs(e3) > Math.abs(t3) ? e3 : t3 : "horizontal" === this.options.gestureOrientation && (h2 = t3);
+        const a2 = s2 && this.options.syncTouch, c2 = s2 && "touchend" === i2.type && Math.abs(h2) > 5;
+        c2 && (h2 = this.velocity * this.options.touchInertiaMultiplier), this.scrollTo(this.targetScroll + h2, Object.assign({ programmatic: false }, a2 ? { lerp: c2 ? this.options.syncTouchLerp : 1 } : { lerp: this.options.lerp, duration: this.options.duration, easing: this.options.easing }));
+      }, this.onNativeScroll = () => {
+        if (!this.__preventNextScrollEvent && !this.isScrolling) {
+          const t3 = this.animatedScroll;
+          this.animatedScroll = this.targetScroll = this.actualScroll, this.velocity = 0, this.direction = Math.sign(this.animatedScroll - t3), this.emit();
+        }
+      }, window.lenisVersion = "1.0.42", t2 !== document.documentElement && t2 !== document.body || (t2 = window), this.options = { wrapper: t2, content: e2, wheelEventsTarget: i, eventsTarget: s, smoothWheel: o, syncTouch: n, syncTouchLerp: r, touchInertiaMultiplier: l, duration: h, easing: a, lerp: c, infinite: d, gestureOrientation: u, orientation: p, touchMultiplier: m, wheelMultiplier: v, autoResize: g, __experimental__naiveDimensions: S }, this.animate = new Animate(), this.emitter = new Emitter(), this.dimensions = new Dimensions({ wrapper: t2, content: e2, autoResize: g }), this.toggleClassName("lenis", true), this.velocity = 0, this.isLocked = false, this.isStopped = false, this.isSmooth = n || o, this.isScrolling = false, this.targetScroll = this.animatedScroll = this.actualScroll, this.options.wrapper.addEventListener("scroll", this.onNativeScroll, false), this.virtualScroll = new VirtualScroll(s, { touchMultiplier: m, wheelMultiplier: v }), this.virtualScroll.on("scroll", this.onVirtualScroll);
+    }
+    destroy() {
+      this.emitter.destroy(), this.options.wrapper.removeEventListener("scroll", this.onNativeScroll, false), this.virtualScroll.destroy(), this.dimensions.destroy(), this.toggleClassName("lenis", false), this.toggleClassName("lenis-smooth", false), this.toggleClassName("lenis-scrolling", false), this.toggleClassName("lenis-stopped", false), this.toggleClassName("lenis-locked", false);
+    }
+    on(t2, e2) {
+      return this.emitter.on(t2, e2);
+    }
+    off(t2, e2) {
+      return this.emitter.off(t2, e2);
+    }
+    setScroll(t2) {
+      this.isHorizontal ? this.rootElement.scrollLeft = t2 : this.rootElement.scrollTop = t2;
+    }
+    resize() {
+      this.dimensions.resize();
+    }
+    emit() {
+      this.emitter.emit("scroll", this);
+    }
+    reset() {
+      this.isLocked = false, this.isScrolling = false, this.animatedScroll = this.targetScroll = this.actualScroll, this.velocity = 0, this.animate.stop();
+    }
+    start() {
+      this.isStopped && (this.isStopped = false, this.reset());
+    }
+    stop() {
+      this.isStopped || (this.isStopped = true, this.animate.stop(), this.reset());
+    }
+    raf(t2) {
+      const e2 = t2 - (this.time || t2);
+      this.time = t2, this.animate.advance(1e-3 * e2);
+    }
+    scrollTo(e2, { offset: i = 0, immediate: s = false, lock: o = false, duration: n = this.options.duration, easing: r = this.options.easing, lerp: l = !n && this.options.lerp, onComplete: h, force: a = false, programmatic: c = true } = {}) {
+      if (!this.isStopped && !this.isLocked || a) {
+        if (["top", "left", "start"].includes(e2)) e2 = 0;
+        else if (["bottom", "right", "end"].includes(e2)) e2 = this.limit;
+        else {
+          let t2;
+          if ("string" == typeof e2 ? t2 = document.querySelector(e2) : (null == e2 ? void 0 : e2.nodeType) && (t2 = e2), t2) {
+            if (this.options.wrapper !== window) {
+              const t3 = this.options.wrapper.getBoundingClientRect();
+              i -= this.isHorizontal ? t3.left : t3.top;
+            }
+            const s2 = t2.getBoundingClientRect();
+            e2 = (this.isHorizontal ? s2.left : s2.top) + this.animatedScroll;
+          }
+        }
+        if ("number" == typeof e2) {
+          if (e2 += i, e2 = Math.round(e2), this.options.infinite ? c && (this.targetScroll = this.animatedScroll = this.scroll) : e2 = t(0, e2, this.limit), s) return this.animatedScroll = this.targetScroll = e2, this.setScroll(this.scroll), this.reset(), void (null == h || h(this));
+          if (!c) {
+            if (e2 === this.targetScroll) return;
+            this.targetScroll = e2;
+          }
+          this.animate.fromTo(this.animatedScroll, e2, { duration: n, easing: r, lerp: l, onStart: () => {
+            o && (this.isLocked = true), this.isScrolling = true;
+          }, onUpdate: (t2, e3) => {
+            this.isScrolling = true, this.velocity = t2 - this.animatedScroll, this.direction = Math.sign(this.velocity), this.animatedScroll = t2, this.setScroll(this.scroll), c && (this.targetScroll = t2), e3 || this.emit(), e3 && (this.reset(), this.emit(), null == h || h(this), this.__preventNextScrollEvent = true, requestAnimationFrame(() => {
+              delete this.__preventNextScrollEvent;
+            }));
+          } });
+        }
+      }
+    }
+    get rootElement() {
+      return this.options.wrapper === window ? document.documentElement : this.options.wrapper;
+    }
+    get limit() {
+      return this.options.__experimental__naiveDimensions ? this.isHorizontal ? this.rootElement.scrollWidth - this.rootElement.clientWidth : this.rootElement.scrollHeight - this.rootElement.clientHeight : this.dimensions.limit[this.isHorizontal ? "x" : "y"];
+    }
+    get isHorizontal() {
+      return "horizontal" === this.options.orientation;
+    }
+    get actualScroll() {
+      return this.isHorizontal ? this.rootElement.scrollLeft : this.rootElement.scrollTop;
+    }
+    get scroll() {
+      return this.options.infinite ? (t2 = this.animatedScroll, e2 = this.limit, (t2 % e2 + e2) % e2) : this.animatedScroll;
+      var t2, e2;
+    }
+    get progress() {
+      return 0 === this.limit ? 1 : this.scroll / this.limit;
+    }
+    get isSmooth() {
+      return this.__isSmooth;
+    }
+    set isSmooth(t2) {
+      this.__isSmooth !== t2 && (this.__isSmooth = t2, this.toggleClassName("lenis-smooth", t2));
+    }
+    get isScrolling() {
+      return this.__isScrolling;
+    }
+    set isScrolling(t2) {
+      this.__isScrolling !== t2 && (this.__isScrolling = t2, this.toggleClassName("lenis-scrolling", t2));
+    }
+    get isStopped() {
+      return this.__isStopped;
+    }
+    set isStopped(t2) {
+      this.__isStopped !== t2 && (this.__isStopped = t2, this.toggleClassName("lenis-stopped", t2));
+    }
+    get isLocked() {
+      return this.__isLocked;
+    }
+    set isLocked(t2) {
+      this.__isLocked !== t2 && (this.__isLocked = t2, this.toggleClassName("lenis-locked", t2));
+    }
+    get className() {
+      let t2 = "lenis";
+      return this.isStopped && (t2 += " lenis-stopped"), this.isLocked && (t2 += " lenis-locked"), this.isScrolling && (t2 += " lenis-scrolling"), this.isSmooth && (t2 += " lenis-smooth"), t2;
+    }
+    toggleClassName(t2, e2) {
+      this.rootElement.classList.toggle(t2, e2), this.emitter.emit("className change", this);
+    }
+  };
+
+  // src/interactions/lenis.js
+  var initLenis = function() {
+    const lenis = new Lenis({
+      duration: 0.5,
+      wheelMultiplier: 0.75,
+      gestureOrientation: "vertical",
+      normalizeWheel: false,
+      smoothTouch: false,
+      easing: (t2) => t2 === 1 ? 1 : 1 - Math.pow(2, -10 * t2)
+      // https://easings.net
+    });
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+    requestAnimationFrame(raf);
+    lenis.on("scroll", () => {
+      if (!ScrollTrigger) return;
+      ScrollTrigger.update();
+    });
+    gsap.ticker.add((time) => {
+      lenis.raf(time * 1e3);
+    });
+    gsap.ticker.lagSmoothing(0);
+    let resizeTimeout;
+    function refreshLenisTimeout(delay = 600) {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        requestAnimationFrame(() => {
+          lenis.resize();
+          console.log("refresh");
+        });
+      }, delay);
+    }
+    function refreshScroll() {
+      const triggers = [...document.querySelectorAll('[data-scroll="refresh"]')];
+      if (triggers.length === 0) return;
+      triggers.forEach((item2) => {
+        if (!item2) return;
+        item2.addEventListener("click", (event) => {
+          refreshLenisTimeout();
+        });
+      });
+    }
+    refreshScroll();
+    function refreshScrollOnLazyLoad() {
+      const images = [...document.querySelectorAll("img[loading='lazy']")];
+      if (images.length === 0) return;
+      images.forEach((img) => {
+        img.addEventListener("load", refreshLenisTimeout);
+      });
+    }
+    function stopScroll2() {
+      const stopScrollLinks = document.querySelectorAll('[data-scroll="stop"]');
+      if (stopScrollLinks == null) {
+        return;
+      }
+      stopScrollLinks.forEach((item2) => {
+        item2.addEventListener("click", (event) => {
+          lenis.stop();
+        });
+      });
+    }
+    stopScroll2();
+    function startScroll2() {
+      const startScrollLinks = document.querySelectorAll('[data-scroll="start"]');
+      if (startScrollLinks == null) {
+        return;
+      }
+      startScrollLinks.forEach((item2) => {
+        item2.addEventListener("click", (event) => {
+          lenis.start();
+        });
+      });
+    }
+    startScroll2();
+    function toggleScroll() {
+      const toggleScrollLinks = document.querySelectorAll('[data-scroll="toggle"]');
+      if (toggleScrollLinks == null) {
+        return;
+      }
+      toggleScrollLinks.forEach((item2) => {
+        let stopScroll3 = false;
+        item2.addEventListener("click", (event) => {
+          stopScroll3 = !stopScroll3;
+          if (stopScroll3) lenis.stop();
+          else lenis.start();
+        });
+      });
+    }
+    toggleScroll();
+    return lenis;
+  };
+
   // src/interactions/hover-active.js
   var hoverActive = function(gsapContext) {
     const ANIMATION_ID = "hoveractive";
@@ -862,29 +1309,29 @@
     const ACTIVE_CLASS = "is-active";
     const hoverActiveList = function(listElement) {
       const children = [...listElement.querySelectorAll(ITEM)];
-      let activeClass = attr(ACTIVE_CLASS, listElement.getAttribute(OPTION_ACTIVE_CLASS));
+      let activeClass2 = attr(ACTIVE_CLASS, listElement.getAttribute(OPTION_ACTIVE_CLASS));
       let keepActive = attr(false, listElement.getAttribute(OPTION_KEEP_ACTIVE));
-      function activateItem(item, activate = true) {
+      function activateItem(item2, activate = true) {
         let hasTarget = true;
-        const itemID = item.getAttribute(ID);
+        const itemID = item2.getAttribute(ID);
         const targetEl = listElement.querySelector(`${TARGET}[${ID}="${itemID}"]`);
         if (!itemID || !targetEl) {
           hasTarget = false;
         }
         if (activate) {
-          item.classList.add(activeClass);
+          item2.classList.add(activeClass2);
           if (hasTarget) {
-            targetEl.classList.add(activeClass);
+            targetEl.classList.add(activeClass2);
           }
         } else {
-          item.classList.remove(activeClass);
+          item2.classList.remove(activeClass2);
           if (hasTarget) {
-            targetEl.classList.remove(activeClass);
+            targetEl.classList.remove(activeClass2);
           }
         }
       }
       children.forEach((currentItem) => {
-        currentItem.addEventListener("mouseover", function(e) {
+        currentItem.addEventListener("mouseover", function(e2) {
           children.forEach((child) => {
             if (child === currentItem) {
               activateItem(currentItem, true);
@@ -893,7 +1340,7 @@
             }
           });
         });
-        currentItem.addEventListener("mouseleave", function(e) {
+        currentItem.addEventListener("mouseleave", function(e2) {
           if (!keepActive) {
             activateItem(currentItem, false);
           }
@@ -913,11 +1360,146 @@
     }
   };
 
+  // src/interactions/load.js
+  var load = function(gsapContext) {
+    const ANIMATION_ID = "load";
+    const ATTRIBUTE = "data-ix-load";
+    const HEADING = "heading";
+    const ITEM = "item";
+    const IMAGE = "image";
+    const STAGGER = "stagger";
+    const POSITION = "data-ix-load-position";
+    const DEFAULT_STAGGER = "<0.2";
+    const items = gsap.utils.toArray(`[${ATTRIBUTE}]`);
+    if (items.length === 0) return;
+    const tl = gsap.timeline({
+      paused: true,
+      defaults: {
+        ease: "power1.out",
+        duration: 0.8
+      }
+    });
+    const loadHeading = function(item2) {
+      if (item2.classList.contains("w-richtext")) {
+        item2.style.opacity = "1";
+        item2 = item2.firstChild;
+      }
+      const splitText = runSplit(item2);
+      if (!splitText) return;
+      const position = attr("<", item2.getAttribute(POSITION));
+      tl.set(item2, { opacity: 1 });
+      tl.fromTo(
+        splitText.words,
+        { opacity: 0, y: "50%", rotateY: 8 },
+        { opacity: 1, y: "0%", rotateY: 0, stagger: { each: 0.1, from: "left" } },
+        position
+      );
+    };
+    const loadImage = function(item2) {
+      const position = attr(DEFAULT_STAGGER, item2.getAttribute(POSITION));
+      tl.fromTo(item2, { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1 }, position);
+    };
+    const loadItem = function(item2) {
+      const position = attr(DEFAULT_STAGGER, item2.getAttribute(POSITION));
+      tl.fromTo(
+        item2,
+        { opacity: 0, y: "2rem", rotateY: 7 },
+        { opacity: 1, y: "0rem", rotateY: 7 },
+        position
+      );
+    };
+    const loadStagger = function(item2) {
+      if (!item2) return;
+      const children = gsap.utils.toArray(item2.children);
+      if (children.length === 0) return;
+      children.forEach((child, index) => {
+        if (index === 0) {
+          item2.style.opacity = 1;
+        }
+        loadItem(child);
+      });
+    };
+    items.forEach((item2) => {
+      if (!item2) return;
+      let runOnBreakpoint = checkBreakpoints(item2, ANIMATION_ID, gsapContext);
+      if (runOnBreakpoint === false) return;
+      const loadType = item2.getAttribute(ATTRIBUTE);
+      if (loadType === HEADING) {
+        loadHeading(item2);
+      }
+      if (loadType === IMAGE) {
+        loadImage(item2);
+      }
+      if (loadType === ITEM) {
+        loadItem(item2);
+      }
+      if (loadType === STAGGER) {
+        loadStagger(item2);
+      }
+    });
+    tl.play(0);
+    return tl;
+  };
+
+  // src/interactions/modal.js
+  var modal = function(gsapContext, lenis) {
+    const ANIMATION_ID = "modal";
+    const MODAL_WRAP = '[data-ix-modal="wrap"]';
+    const MODAL_TRIGGER = "data-ix-modal-trigger";
+    const MODAL_CLOSE_BTN = '[data-ix-modal="close"]';
+    const TIMEOUT = "data-ix-modal-timeout";
+    const MODAL_TRIGGER_DEFAULT = "blank-id";
+    const DEFAULT_TIMEOUT = 3;
+    let activeModal = false;
+    const modals = [...document.querySelectorAll(MODAL_WRAP)];
+    if (modals.length === 0) return;
+    modals.forEach((modal2, index) => {
+      const closeButtons = [...modal2.querySelectorAll(MODAL_CLOSE_BTN)];
+      const timeout = attr(DEFAULT_TIMEOUT, modal2.getAttribute(TIMEOUT));
+      const triggerID = attr(MODAL_TRIGGER_DEFAULT, modal2.getAttribute(MODAL_TRIGGER));
+      if (triggerID !== MODAL_TRIGGER_DEFAULT) {
+        const trigger = document.querySelector(`#${triggerID}`);
+        if (trigger) {
+          trigger.addEventListener("click", (e2) => {
+            openModal(modal2);
+          });
+        }
+      } else {
+        setTimeout(() => {
+          openModal(modal2);
+        }, timeout * 1e3);
+      }
+      modal2.addEventListener("keydown", (e2) => {
+        if (e2.key === "Escape" && activeModal !== false) {
+          closeModal(modal2);
+        }
+      });
+      closeButtons.forEach((item2) => {
+        item2.addEventListener("click", (e2) => {
+          closeModal(modal2);
+        });
+      });
+    });
+    const openModal = function(modal2) {
+      if (!modal2) return;
+      modal2.showModal();
+      stopScroll(lenis);
+      activeModal = modal2;
+    };
+    const closeModal = function(modal2) {
+      if (!modal2) return;
+      modal2.close();
+      startScroll(lenis);
+      activemodal = false;
+    };
+  };
+
   // src/interactions/scroll-in.js
   var scrollIn = function(gsapContext) {
     const ANIMATION_ID = "scrollin";
     const ELEMENT = "data-ix-scrollin";
     const HEADING = "heading";
+    const TITLE = "title";
     const ITEM = "item";
     const CONTAINER = "container";
     const STAGGER = "stagger";
@@ -932,27 +1514,27 @@
     const CLIP_DIRECTION = "data-ix-scrollin-direction";
     const SCROLL_STAGGER = "data-ix-scrollin-stagger";
     const EASE_SMALL = 0.1;
-    const EASE_LARGE = 0.3;
-    const DURATION = 0.6;
-    const EASE = "power1.out";
-    const scrollInTL = function(item) {
+    const EASE_LARGE = 0.2;
+    const DURATION = 0.8;
+    const EASE = "power3.inOut";
+    const scrollInTL = function(item2) {
       const settings = {
         scrub: false,
         toggleActions: "play none none none",
         start: "top 90%",
         end: "top 75%"
       };
-      settings.toggleActions = attr(settings.toggleActions, item.getAttribute(SCROLL_TOGGLE_ACTIONS));
-      settings.scrub = attr(settings.scrub, item.getAttribute(SCROLL_SCRUB));
-      settings.start = attr(settings.start, item.getAttribute(SCROLL_START));
-      settings.end = attr(settings.end, item.getAttribute(SCROLL_END));
+      settings.toggleActions = attr(settings.toggleActions, item2.getAttribute(SCROLL_TOGGLE_ACTIONS));
+      settings.scrub = attr(settings.scrub, item2.getAttribute(SCROLL_SCRUB));
+      settings.start = attr(settings.start, item2.getAttribute(SCROLL_START));
+      settings.end = attr(settings.end, item2.getAttribute(SCROLL_END));
       const tl = gsap.timeline({
         defaults: {
           duration: DURATION,
           ease: EASE
         },
         scrollTrigger: {
-          trigger: item,
+          trigger: item2,
           start: settings.start,
           end: settings.end,
           toggleActions: settings.toggleActions,
@@ -961,14 +1543,16 @@
       });
       return tl;
     };
-    const defaultTween = function(item, tl, options = {}) {
+    const defaultTween = function(item2, tl, options = {}) {
       const varsFrom = {
         opacity: 0,
-        y: "2rem"
+        x: "1rem",
+        rotateY: 8
       };
       const varsTo = {
         opacity: 1,
-        y: "0rem"
+        x: "0rem",
+        rotateY: 0
       };
       if (options.stagger) {
         varsTo.stagger = { each: options.stagger, from: "start" };
@@ -979,69 +1563,73 @@
       if (options.stagger === "large") {
         varsTo.stagger = { each: EASE_LARGE, from: "start" };
       }
-      const tween = tl.fromTo(item, varsFrom, varsTo);
+      if (options.move === "none") {
+        varsFrom.x = "0rem";
+        varsTo.ease = "expo.out";
+      }
+      const tween = tl.fromTo(item2, varsFrom, varsTo);
       return tween;
     };
-    const scrollInHeading = function(item) {
-      if (item.classList.contains("w-richtext")) {
-        item = item.firstChild;
+    const scrollInHeading = function(item2) {
+      if (item2.classList.contains("w-richtext")) {
+        item2 = item2.firstChild;
       }
-      const splitText = runSplit(item);
+      const splitText = runSplit(item2);
       if (!splitText) return;
-      const tl = scrollInTL(item);
-      const tween = defaultTween(splitText.words, tl, { stagger: "small", skew: "large" });
+      const tl = scrollInTL(item2);
+      const tween = defaultTween(splitText.words, tl, { stagger: "small" });
       tl.eventCallback("onComplete", () => {
-        splitText.revert();
       });
     };
-    const scrollInItem = function(item) {
-      if (!item) return;
-      if (item.classList.contains("w-richtext")) {
-        const children = gsap.utils.toArray(item.children);
+    const scrollInTitle = function(item2) {
+      if (item2.classList.contains("w-richtext")) {
+        item2 = item2.firstChild;
+      }
+      const splitText = runSplit(item2, "words chars");
+      if (!splitText) return;
+      const tl = scrollInTL(item2);
+      const tween = defaultTween(splitText.chars, tl, { stagger: 0.075, move: "none" });
+      tl.eventCallback("onComplete", () => {
+      });
+    };
+    const scrollInItem = function(item2) {
+      if (!item2) return;
+      if (item2.classList.contains("w-richtext")) {
+        const children = gsap.utils.toArray(item2.children);
         if (children.length === 0) return;
         children.forEach((child) => {
           const tl = scrollInTL(child);
           const tween = defaultTween(child, tl);
         });
       } else {
-        const tl = scrollInTL(item);
-        const tween = defaultTween(item, tl);
+        const tl = scrollInTL(item2);
+        const tween = defaultTween(item2, tl);
       }
     };
-    const scrollInImage = function(item) {
-      if (!item) return;
-      const child = item.firstChild;
-      const tl = scrollInTL(item);
+    const scrollInImage = function(item2) {
+      if (!item2) return;
+      const clipStart = getClipDirection("left");
+      const clipEnd = getClipDirection("full");
+      const tl = scrollInTL(item2);
       tl.fromTo(
-        child,
+        item2,
         {
-          scale: 1.2
+          clipPath: clipStart
         },
         {
-          scale: 1,
-          duration: 1
+          clipPath: clipEnd,
+          duration: 1.2
         }
       );
-      tl.fromTo(
-        item,
-        {
-          scale: 0.9
-        },
-        {
-          scale: 1,
-          duration: 1
-        },
-        "<"
-      );
     };
-    const scrollInLine = function(item) {
-      if (!item) return;
-      const clipAttr = attr("left", item.getAttribute(CLIP_DIRECTION));
+    const scrollInLine = function(item2) {
+      if (!item2) return;
+      const clipAttr = attr("left", item2.getAttribute(CLIP_DIRECTION));
       const clipStart = getClipDirection(clipAttr);
       const clipEnd = getClipDirection("full");
-      const tl = scrollInTL(item);
+      const tl = scrollInTL(item2);
       tl.fromTo(
-        item,
+        item2,
         {
           clipPath: clipStart
         },
@@ -1050,26 +1638,26 @@
         }
       );
     };
-    const scrollInContainer = function(item) {
-      if (!item) return;
-      const children = gsap.utils.toArray(item.children);
+    const scrollInContainer = function(item2) {
+      if (!item2) return;
+      const children = gsap.utils.toArray(item2.children);
       if (children.length === 0) return;
       children.forEach((child) => {
         const tl = scrollInTL(child);
         const tween = defaultTween(child, tl);
       });
     };
-    const scrollInStagger = function(item) {
-      if (!item) return;
-      const ease = attr(EASE_LARGE, item.getAttribute(SCROLL_STAGGER));
-      const children = gsap.utils.toArray(item.children);
+    const scrollInStagger = function(item2) {
+      if (!item2) return;
+      const ease = attr(EASE_LARGE, item2.getAttribute(SCROLL_STAGGER));
+      const children = gsap.utils.toArray(item2.children);
       if (children.length === 0) return;
-      const tl = scrollInTL(item);
+      const tl = scrollInTL(item2);
       const tween = defaultTween(children, tl, { stagger: ease });
     };
-    const scrollInRichText = function(item) {
-      if (!item) return;
-      const children = gsap.utils.toArray(item.children);
+    const scrollInRichText = function(item2) {
+      if (!item2) return;
+      const children = gsap.utils.toArray(item2.children);
       if (children.length === 0) return;
       children.forEach((child) => {
         const childTag = child.tagName;
@@ -1084,44 +1672,173 @@
       });
     };
     const items = gsap.utils.toArray(`[${ELEMENT}]`);
-    items.forEach((item) => {
-      if (!item) return;
-      let runOnBreakpoint = checkBreakpoints(item, ANIMATION_ID, gsapContext);
+    items.forEach((item2) => {
+      if (!item2) return;
+      let runOnBreakpoint = checkBreakpoints(item2, ANIMATION_ID, gsapContext);
       if (runOnBreakpoint === false) return;
-      const scrollInType = item.getAttribute(ELEMENT);
+      const scrollInType = item2.getAttribute(ELEMENT);
+      if (scrollInType === TITLE) {
+        scrollInTitle(item2);
+      }
       if (scrollInType === HEADING) {
-        scrollInHeading(item);
+        scrollInHeading(item2);
       }
       if (scrollInType === ITEM) {
-        scrollInItem(item);
+        scrollInItem(item2);
       }
       if (scrollInType === IMAGE) {
-        scrollInImage(item);
+        scrollInImage(item2);
       }
       if (scrollInType === LINE) {
-        scrollInLine(item);
+        scrollInLine(item2);
       }
       if (scrollInType === CONTAINER) {
-        scrollInContainer(item);
+        scrollInContainer(item2);
       }
       if (scrollInType === STAGGER) {
-        scrollInStagger(item);
+        scrollInStagger(item2);
       }
       if (scrollInType === RICH_TEXT) {
-        scrollInRichText(item);
+        scrollInRichText(item2);
       }
+    });
+  };
+
+  // src/interactions/scrolling.js
+  var scrolling = function(gsapContext) {
+    const ANIMATION_ID = "scrolling";
+    const WRAP = `[data-ix-scrolling="wrap"]`;
+    const TRIGGER = `[data-ix-scrolling="trigger"]`;
+    const LAYER = '[data-ix-scrolling="layer"]';
+    const START = "data-ix-scrolling-start";
+    const END = "data-ix-scrolling-end";
+    const TABLET_START = "data-ix-scrolling-start-tablet";
+    const TABLET_END = "data-ix-scrolling-end-tablet";
+    const MOBILE_START = "data-ix-scrolling-start-mobile";
+    const MOBILE_END = "data-ix-scrolling-end-mobile";
+    const SCRUB = "data-ix-scrolling-scrub";
+    const POSITION = "data-ix-scrolling-position";
+    const EASE = "data-ix-scrolling-ease";
+    const X_START = "data-ix-scrolling-x-start";
+    const X_END = "data-ix-scrolling-x-end";
+    const Y_START = "data-ix-scrolling-y-start";
+    const Y_END = "data-ix-scrolling-y-end";
+    const SCALE_START = "data-ix-scrolling-scale-start";
+    const SCALE_END = "data-ix-scrolling-scale-end";
+    const SCALE_X_START = "data-ix-scrolling-scale-x-start";
+    const SCALE_X_END = "data-ix-scrolling-scale-x-end";
+    const SCALE_Y_START = "data-ix-scrolling-scale-y-start";
+    const SCALE_Y_END = "data-ix-scrolling-scale-y-end";
+    const WIDTH_START = "data-ix-scrolling-width-start";
+    const WIDTH_END = "data-ix-scrolling-width-end";
+    const HEIGHT_START = "data-ix-scrolling-height-start";
+    const HEIGHT_END = "data-ix-scrolling-height-end";
+    const ROTATE_X_START = "data-ix-scrolling-rotate-x-start";
+    const ROTATE_X_END = "data-ix-scrolling-rotate-x-end";
+    const ROTATE_Y_START = "data-ix-scrolling-rotate-y-start";
+    const ROTATE_Y_END = "data-ix-scrolling-rotate-y-end";
+    const ROTATE_Z_START = "data-ix-scrolling-rotate-z-start";
+    const ROTATE_Z_END = "data-ix-scrolling-rotate-z-end";
+    const OPACITY_START = "data-ix-scrolling-opacity-start";
+    const OPACITY_END = "data-ix-scrolling-opacity-end";
+    const RADIUS_START = "data-ix-scrolling-radius-start";
+    const RADIUS_END = "data-ix-scrolling-radius-end";
+    const CLIP_START = "data-ix-scrolling-clip-start";
+    const CLIP_END = "data-ix-scrolling-clip-end";
+    const scrollingItems = gsap.utils.toArray(WRAP);
+    scrollingItems.forEach((scrollingItem) => {
+      const layers = scrollingItem.querySelectorAll(LAYER);
+      if (!scrollingItem || layers.length === 0) return;
+      let trigger = scrollingItem.querySelector(TRIGGER);
+      if (!trigger) {
+        trigger = scrollingItem;
+      }
+      let runOnBreakpoint = checkBreakpoints(scrollingItem, ANIMATION_ID, gsapContext);
+      if (runOnBreakpoint === false) return;
+      let { isMobile, isTablet, isDesktop, reduceMotion } = gsapContext.conditions;
+      const tlSettings = {
+        scrub: 0.5,
+        start: "top bottom",
+        end: "bottom top",
+        ease: "none"
+      };
+      tlSettings.start = attr(tlSettings.start, scrollingItem.getAttribute(START));
+      tlSettings.end = attr(tlSettings.end, scrollingItem.getAttribute(END));
+      tlSettings.scrub = attr(tlSettings.scrub, scrollingItem.getAttribute(SCRUB));
+      tlSettings.ease = attr(tlSettings.ease, scrollingItem.getAttribute(EASE));
+      if (isTablet && scrollingItem.getAttribute(TABLET_START)) {
+        tlSettings.start = attr(tlSettings.start, scrollingItem.getAttribute(TABLET_START));
+      }
+      if (isTablet && scrollingItem.getAttribute(TABLET_END)) {
+        tlSettings.start = attr(tlSettings.start, scrollingItem.getAttribute(TABLET_END));
+      }
+      if (isMobile && scrollingItem.getAttribute(MOBILE_START)) {
+        tlSettings.start = attr(tlSettings.start, scrollingItem.getAttribute(MOBILE_START));
+      }
+      if (isMobile && scrollingItem.getAttribute(MOBILE_END)) {
+        tlSettings.start = attr(tlSettings.start, scrollingItem.getAttribute(MOBILE_END));
+      }
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger,
+          start: tlSettings.start,
+          end: tlSettings.end,
+          scrub: tlSettings.scrub,
+          markers: false
+        },
+        defaults: {
+          duration: 1,
+          ease: tlSettings.ease
+        }
+      });
+      layers.forEach((layer) => {
+        if (!layer) return;
+        const varsFrom = {};
+        const varsTo = {};
+        varsFrom.x = attrIfSet(layer, X_START, "0%");
+        varsTo.x = attrIfSet(layer, X_END, "0%");
+        varsFrom.y = attrIfSet(layer, Y_START, "0%");
+        varsTo.y = attrIfSet(layer, Y_END, "0%");
+        varsFrom.scale = attrIfSet(layer, SCALE_START, 1);
+        varsTo.scale = attrIfSet(layer, SCALE_END, 1);
+        varsFrom.scaleX = attrIfSet(layer, SCALE_X_START, 1);
+        varsTo.scaleX = attrIfSet(layer, SCALE_X_END, 1);
+        varsFrom.scaleY = attrIfSet(layer, SCALE_Y_START, 1);
+        varsTo.scaleY = attrIfSet(layer, SCALE_Y_END, 1);
+        varsFrom.width = attrIfSet(layer, WIDTH_START, "0%");
+        varsTo.width = attrIfSet(layer, WIDTH_END, "0%");
+        varsFrom.height = attrIfSet(layer, HEIGHT_START, "0%");
+        varsTo.height = attrIfSet(layer, HEIGHT_END, "0%");
+        varsFrom.rotateX = attrIfSet(layer, ROTATE_X_START, 0);
+        varsTo.rotateX = attrIfSet(layer, ROTATE_X_END, 0);
+        varsFrom.rotateY = attrIfSet(layer, ROTATE_Y_START, 0);
+        varsTo.rotateY = attrIfSet(layer, ROTATE_Y_END, 0);
+        varsFrom.rotateZ = attrIfSet(layer, ROTATE_Z_START, 0);
+        varsTo.rotateZ = attrIfSet(layer, ROTATE_Z_END, 0);
+        varsFrom.opacity = attrIfSet(layer, OPACITY_START, 0);
+        varsTo.opacity = attrIfSet(layer, OPACITY_END, 0);
+        varsFrom.borderRadius = attrIfSet(layer, RADIUS_START, "string");
+        varsTo.borderRadius = attrIfSet(layer, RADIUS_END, "string");
+        const clipStart = attrIfSet(layer, CLIP_START, "left");
+        const clipEnd = attrIfSet(layer, CLIP_END, "full");
+        varsFrom.clipPath = getClipDirection(clipStart);
+        varsTo.clipPath = getClipDirection(clipEnd);
+        const position = attr("<", layer.getAttribute(POSITION));
+        varsTo.ease = attr(layer, EASE, "none");
+        let tween = tl.fromTo(layer, varsFrom, varsTo, position);
+      });
     });
   };
 
   // src/index.js
   document.addEventListener("DOMContentLoaded", function() {
-    console.log("Local Script");
     if (gsap.ScrollTrigger !== void 0) {
       gsap.registerPlugin(ScrollTrigger);
     }
     if (gsap.Flip !== void 0) {
       gsap.registerPlugin(Flip);
     }
+    let lenis;
     const gsapInit = function() {
       let mm = gsap.matchMedia();
       mm.add(
@@ -1134,9 +1851,14 @@
         },
         (gsapContext) => {
           let { isMobile, isTablet, isDesktop, reduceMotion } = gsapContext.conditions;
+          lenis = initLenis();
           hoverActive(gsapContext);
+          modal(gsapContext);
+          load(gsapContext);
+          accordion(gsapContext);
           if (!reduceMotion) {
             scrollIn(gsapContext);
+            scrolling(gsapContext);
           }
         }
       );
@@ -1146,11 +1868,11 @@
       const RESET_EL = "[data-ix-reset]";
       const RESET_TIME = "data-ix-reset-time";
       const resetScrollTriggers = document.querySelectorAll(RESET_EL);
-      resetScrollTriggers.forEach(function(item) {
-        item.addEventListener("click", function(e) {
+      resetScrollTriggers.forEach(function(item2) {
+        item2.addEventListener("click", function(e2) {
           ScrollTrigger.refresh();
-          if (item.hasAttribute(RESET_TIME)) {
-            let time = attr(1e3, item.getAttribute(RESET_TIME));
+          if (item2.hasAttribute(RESET_TIME)) {
+            let time = attr(1e3, item2.getAttribute(RESET_TIME));
             setTimeout(() => {
               ScrollTrigger.refresh();
             }, time);
