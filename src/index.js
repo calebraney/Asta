@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function () {
         //functional interactions
         lenis = initLenis();
         hoverActive(gsapContext);
-        modal(gsapContext);
+        modal(gsapContext, lenis);
         load(gsapContext);
         accordion(gsapContext);
         //conditional interactions
