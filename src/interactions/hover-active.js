@@ -1,89 +1,79 @@
 import { attr, checkBreakpoints } from '../utilities';
-export const horizontal = function (gsapContext) {
+
+export const hoverActive = function (gsapContext) {
   //animation ID
-  const ANIMATION_ID = 'horizontal';
-  //selectors
-  const WRAP_SELECTOR = '[data-ix-horizontal="wrap"]';
-  const INNER_SELECTOR = '[data-ix-horizontal="inner"]';
-  const TRACK_SELECTOR = '[data-ix-horizontal="track"]';
-
-  //options
-  const OPTION_MATCH_HEIGHT = 'data-ix-horizontal-start';
-
+  const ANIMATION_ID = 'hoveractive';
   //elements
-  const sections = document.querySelectorAll(WRAP_SELECTOR);
-  sections.forEach((section) => {
-    //get elements
-    let wrap = section;
-    let inner = wrap.querySelector(INNER_SELECTOR);
-    let track = wrap.querySelector(TRACK_SELECTOR);
-    if (!wrap || !inner || !track) return;
+  const WRAP = '[data-ix-hoveractive="wrap"]';
+  const ITEM = '[data-ix-hoveractive="item"]';
+  const TARGET = '[data-ix-hoveractive="target"]'; //additional element to activate (needs matching values for the ID attribute)
+  const ID = 'data-ix-hoveractive-id';
+  //options
+  const OPTION_ACTIVE_CLASS = 'data-ix-hoveractive-class';
+  const OPTION_KEEP_ACTIVE = 'data-ix-hoveractive-keep-active';
+  const ACTIVE_CLASS = 'is-active';
 
-    //check breakpoints and quit function if set on specific breakpoints
-    let runOnBreakpoint = checkBreakpoints(wrap, ANIMATION_ID, gsapContext);
-    if (runOnBreakpoint === false) return;
+  const hoverActiveList = function (listElement) {
+    const children = [...listElement.querySelectorAll(ITEM)];
 
-    // function to set section height
-    const setScrollDistance = function () {
-      wrap.style.height = 'calc(' + track.offsetWidth + 'px + 100vh)';
-    };
-    //get option to see if height is matched
-    let matchHeight = attr(true, wrap.getAttribute(OPTION_MATCH_HEIGHT));
-    if (matchHeight) {
-      setScrollDistance();
-      ScrollTrigger.refresh();
-      window.addEventListener('resize', setScrollDistance);
+    let activeClass = attr(ACTIVE_CLASS, listElement.getAttribute(OPTION_ACTIVE_CLASS));
+    let keepActive = attr(false, listElement.getAttribute(OPTION_KEEP_ACTIVE));
+
+    //helper function to activate or deactivate items
+    function activateItem(item, activate = true) {
+      let hasTarget = true;
+      const itemID = item.getAttribute(ID);
+      const targetEl = listElement.querySelector(`${TARGET}[${ID}="${itemID}"]`);
+      //if target or id isn't found set hasTarget to false
+      if (!itemID || !targetEl) {
+        hasTarget = false;
+      }
+      if (activate) {
+        item.classList.add(activeClass);
+        if (hasTarget) {
+          targetEl.classList.add(activeClass);
+        }
+      } else {
+        item.classList.remove(activeClass);
+        if (hasTarget) {
+          targetEl.classList.remove(activeClass);
+        }
+      }
     }
 
-    // create main horizontal scroll timeline
-    let tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: wrap,
-        start: 'top top',
-        end: 'bottom bottom',
-        scrub: true,
-      },
-      defaults: { ease: 'none' },
+    //on each child
+    children.forEach((currentItem) => {
+      //when hovered in
+      currentItem.addEventListener('mouseover', function (e) {
+        //go through each child and activate the current item
+        children.forEach((child) => {
+          if (child === currentItem) {
+            activateItem(currentItem, true);
+          } else {
+            activateItem(child, false);
+          }
+        });
+      });
+      currentItem.addEventListener('mouseleave', function (e) {
+        //only remove the active class if keep active is false, otherwise active class will get removed when another item is hovered in
+        if (!keepActive) {
+          activateItem(currentItem, false);
+        }
+      });
     });
-    tl.to(track, { xPercent: -100 });
+  };
 
-    // get container left position
-    function containerLeft() {
-      return inner.offsetLeft + 'px';
-    }
-    // get container right position
-    function containerRight() {
-      return inner.offsetLeft + inner.offsetWidth + 'px';
-    }
-
-    //DEMO INNER TIMELINES
-    //   let tl2 = gsap.timeline({
-    //     scrollTrigger: {
-    //       trigger: wrap.querySelector(".scroll_horizontal_hero_wrap"),
-    //       containerAnimation: tl,
-    //       // start when the left side of the element hits the left side of the container
-    //       start: "left " + containerLeft(),
-    //       end: "right " + containerLeft(),
-    //       scrub: true,
-    //       // markers: true,
-    //     },
-    //     defaults: { ease: "none" },
-    //   });
-    //   tl2.to(wrap.querySelector(".scroll_horizontal_hero_title"), { opacity: 0, filter: "blur(60px)" });
-
-    //   //
-    //   let tl3 = gsap.timeline({
-    //     scrollTrigger: {
-    //       trigger: wrap.querySelector(".scroll_horizontal_pin_wrap"),
-    //       containerAnimation: tl,
-    //       start: "left " + containerLeft(),
-    //       end: "right " + containerRight(),
-    //       scrub: true,
-    //       // markers: true,
-    //     },
-    //     defaults: { ease: "none" },
-    //   });
-    //   tl3.to(wrap.querySelector(".scroll_horizontal_pin_element"), { xPercent: 100 });
-    //   tl3.from(wrap.querySelector(".scroll_horizontal_img"), { scale: 0.5 }, "<");
-  });
+  //select all the wrap elements
+  const wraps = [...document.querySelectorAll(WRAP)];
+  //if wraps exist run on each wrap, otherwise run on the body
+  if (wraps.length >= 0) {
+    wraps.forEach((wrap) => {
+      let runOnBreakpoint = checkBreakpoints(wrap, ANIMATION_ID, gsapContext);
+      if (runOnBreakpoint === false) return;
+      hoverActiveList(wrap);
+    });
+  } else {
+    const body = document.querySelector('body');
+    hoverActiveList(body);
+  }
 };

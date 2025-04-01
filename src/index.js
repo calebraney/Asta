@@ -1,10 +1,12 @@
 import { attr } from './utilities';
+import { initLenis } from './interactions/lenis';
 import { hoverActive } from './interactions/hover-active';
+import { load } from './interactions/load';
+import { modal } from './interactions/modal';
 import { scrollIn } from './interactions/scroll-in';
+import { scrolling } from './interactions/scrolling';
 
 document.addEventListener('DOMContentLoaded', function () {
-  // Comment out for production
-  console.log('Local Script');
   // register gsap plugins if available
   if (gsap.ScrollTrigger !== undefined) {
     gsap.registerPlugin(ScrollTrigger);
@@ -15,6 +17,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   //////////////////////////////
   //Global Variables
+  let lenis;
 
   //////////////////////////////
   //Control Functions on page load
@@ -31,10 +34,14 @@ document.addEventListener('DOMContentLoaded', function () {
       (gsapContext) => {
         let { isMobile, isTablet, isDesktop, reduceMotion } = gsapContext.conditions;
         //functional interactions
+        lenis = initLenis();
         hoverActive(gsapContext);
+        modal(gsapContext);
+        load(gsapContext);
         //conditional interactions
         if (!reduceMotion) {
           scrollIn(gsapContext);
+          scrolling(gsapContext);
         }
       }
     );
